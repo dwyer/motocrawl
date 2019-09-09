@@ -9,14 +9,12 @@ import urllib.request
 from bs4 import BeautifulSoup
 
 API_BASE = 'https://mssproxy.motorsportstats.com/web/3.0.0/'
-WEB_BASE = 'https://results.motorsportstats.com/'
 
 SEASONS_URL =   API_BASE + 'series/%s/seasons'
 RACES_URL =     API_BASE + 'seasons/%s/races'
 CONST_URL =     API_BASE + 'seasons/%s/standings/constructors'
 SESSIONS_URL =  API_BASE + 'events/%s/sessions'
 CLASS_URL =     API_BASE + 'sessions/%s/classification'
-TEST_URL =      WEB_BASE + 'results/%s'
 
 SERIESES = ['motogp']
 
@@ -45,13 +43,7 @@ def get(url):
         print('getting', url)
         opener.retrieve(url, filename)
     with open(filename) as fp:
-        if url.startswith(WEB_BASE):
-            soup = BeautifulSoup(fp)
-            for script in soup.find_all('script'):
-                if script.text and script.text.startswith(APP_PREFIX):
-                    return json.loads(script.text.lstrip(APP_PREFIX))
-        else:
-            return json.load(fp)
+        return json.load(fp)
 
 fieldnames = {}
 
@@ -65,7 +57,7 @@ def flatten(src, dst, prefix=''):
             assert len(value) == 1
             value = value[0]
         if isinstance(value, dict):
-            flatten(value, dst, prefix + key + '.')
+            flatten(value, dst, prefix + key + '_')
         else:
             dst[prefix + key] = value
             fieldnames[prefix + key] = 1
@@ -82,8 +74,7 @@ for series in SERIESES:
             del race['winner']
             del race['venue']
             race_id = race['event']['uuid']
-            app = get(TEST_URL % race_id)
-            for session in app['state']['event']['sessions']['list']['data']:
+            for session in get(SESSIONS_URL % race_id):
                 if not session['hasResults']:
                     continue
                 session_id = session['session']['uuid']
