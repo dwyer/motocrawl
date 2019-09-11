@@ -17,8 +17,13 @@ IGNORE_KEYS = {'type', 'code', 'uuid', 'picture',
                'race', 'winner', 'venue',
                'hasResults', 'preciseStartTime'}
 
-# DATE_KEYS = {'startTimeUtc', 'endTimeUtc'}
-DATE_KEYS = {'date', 'startTime', 'endTime'}
+CONVERTERS = {
+    'date': datetime.datetime.fromtimestamp,
+    'endTime': datetime.datetime.fromtimestamp,
+    # 'endTimeUtc': datetime.datetime.fromtimestamp,
+    'startTime': datetime.datetime.fromtimestamp,
+    # 'startTimeUtc': datetime.datetime.fromtimestamp,
+}
 CACHE_DIR = 'cache'
 
 API_BASE = 'https://mssproxy.motorsportstats.com/web/3.0.0/'
@@ -64,10 +69,25 @@ def flatten(dst, src, prefix=''):
         if isinstance(value, dict):
             flatten(dst, value, prefix + key + '_')
         else:
-            if value and key in DATE_KEYS:
-                value = datetime.datetime.fromtimestamp(value)
+            if value and key in CONVERTERS:
+                value = CONVERTERS[key](value)
             dst[prefix + key] = value
             fieldnames[prefix + key] = 1
+            if key == 'time':
+                key = 'timeHuman'
+                dst[prefix + key] = timestr(value)
+                fieldnames[prefix + key] = 1
+
+
+def timestr(time):
+    if time is None:
+        return None
+    s = time / 1000
+    ms = time % 1000
+    m = s / 60
+    s %= 60
+    assert m < 60
+    return '%d:%02d.%03d' % (m, s, ms)
 
 
 def getseries(series):
