@@ -16,6 +16,7 @@ MAX_SEASONS = 20
 IGNORE_KEYS = {'type', 'code', 'uuid', 'picture',
                'race', 'winner', 'venue',
                'hasResults', 'preciseStartTime'}
+TIME_KEYS = {'time', 'timeToLead', 'timeToNext'}
 
 CONVERTERS = {
     'date': datetime.datetime.fromtimestamp,
@@ -40,6 +41,18 @@ stats = {
     'pages scraped': 0,
     'classifications': 0,
 }
+
+fieldnames = [
+    'season_name', 'year', 'event_name', 'date', 'session_name',
+    'sessionNumber', 'hasFacts', 'isTimetable', 'startTime', 'startTimeUtc',
+    'endTime', 'endTimeUtc', 'finishPosition', 'carNumber', 'classifiedStatus',
+    'drivers_name', 'nationality_name', 'seriesClass', 'team_name', 'laps',
+    'time', 'timeHuman', 'avgLapSpeed', 'gap_timeToLead',
+    'gap_timeToLeadHuman', 'gap_timeToNext', 'gap_timeToNextHuman',
+    'gap_lapsToLead', 'gap_lapsToNext', 'bestLap_lap', 'bestLap_time',
+    'bestLap_timeHuman', 'bestLap_fastest', 'bestLap_speed',
+    'seriesClass_name', 'nationality',
+]
 
 
 class Opener(urllib.request.URLopener):
@@ -72,11 +85,9 @@ def flatten(dst, src, prefix=''):
             if value and key in CONVERTERS:
                 value = CONVERTERS[key](value)
             dst[prefix + key] = value
-            fieldnames[prefix + key] = 1
-            if key == 'time':
-                key = 'timeHuman'
+            if key in TIME_KEYS:
+                key += 'Human'
                 dst[prefix + key] = timestr(value)
-                fieldnames[prefix + key] = 1
 
 
 def timestr(time):
@@ -87,13 +98,11 @@ def timestr(time):
     m = s / 60
     s %= 60
     assert m < 60
-    return '%d:%02d.%03d' % (m, s, ms)
+    return '%d.%02d.%03d' % (m, s, ms)
 
 
-def getseries(series):
+def getseries(series, writers=[]):
     opener = Opener()
-    rows = []
-    filename = series + '.csv'
     stats['series'] += 1
     seasons_url = SEASONS_URL % series
     for season in opener.get(seasons_url)[:MAX_SEASONS]:
@@ -111,24 +120,9 @@ def getseries(series):
                     flatten(row, race)
                     flatten(row, session)
                     flatten(row, classification)
-                    rows.append(row)
-    with open(filename, 'w') as fp:
-        writer = csv.DictWriter(fp, fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-        stats['classifications'] += len(rows)
-    print(fieldnames.keys())
-    return filename
-
-
-def combine_csv(srcs, dst):
-    with open(dst, 'w') as fp:
-        writer = csv.DictWriter(fp, fieldnames)
-        writer.writeheader()
-        for src in srcs:
-            with open(src) as fp:
-                for row in csv.DictReader(fp):
-                    writer.writerow(row)
+                    for writer in writers:
+                        writer.writerow(row)
+                    stats['classifications'] += 1
 
 
 def sizestr(n):
@@ -141,12 +135,18 @@ def sizestr(n):
 
 
 if __name__ == '__main__':
-    fieldnames = {}
     files = []
-    for series in SERIES:
-        files.append(getseries(series))
     combined_csv = 'allseries.csv'
-    combine_csv(files, combined_csv)
+    with open(combined_csv, 'w') as fp:
+        combined = csv.DictWriter(fp, fieldnames)
+        combined.writeheader()
+        for series in SERIES:
+            filename = series + '.csv'
+            files.append(filename)
+            with open(filename, 'w') as fp:
+                writer = csv.DictWriter(fp, fieldnames)
+                writer.writeheader()
+                getseries(series, [writer, combined])
     files.append(combined_csv)
     # cache_tar = CACHE_DIR + '.tar.gz'
     # subprocess.call(['tar', 'czf', cache_tar, CACHE_DIR])
