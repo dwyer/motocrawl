@@ -11,11 +11,13 @@ import urllib.request
 start = datetime.datetime.now()
 
 SERIES = ['motogp', 'moto2', 'moto3']
-MAX_SEASONS = 20
+MAX_SEASONS = 22
 
 IGNORE_KEYS = {'type', 'code', 'uuid', 'picture',
                'race', 'winner', 'venue',
-               'hasResults', 'preciseStartTime'}
+               'hasResults', 'preciseStartTime',
+               # Added in 2020?
+               'cancelled', 'status', 'active', 'pitlane'}
 TIME_KEYS = {'time', 'timeToLead', 'timeToNext'}
 
 CONVERTERS = {
@@ -63,7 +65,13 @@ class Opener(urllib.request.URLopener):
         if not os.path.exists(filename):
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             print('getting', url)
-            self.retrieve(url, filename)
+            request = urllib.request.Request(url)
+            request.headers['REFERER'] = 'https://results.motorsportstats.com/'
+            request.headers['USER_AGENT'] = self.version
+            with urllib.request.urlopen(request) as response:
+                content = response.read()
+                with open(filename, 'wb') as fp:
+                    fp.write(content)
         with open(filename) as fp:
             return json.load(fp)
 
