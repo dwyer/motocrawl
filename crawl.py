@@ -11,7 +11,7 @@ import urllib.request
 start = datetime.datetime.now()
 
 SERIES = ['motogp', 'moto2', 'moto3']
-MAX_SEASONS = 22
+MAX_SEASONS = 21
 
 IGNORE_KEYS = {'type', 'code', 'uuid', 'picture',
                'race', 'winner', 'venue',
