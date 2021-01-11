@@ -176,8 +176,8 @@ if __name__ == '__main__':
         for stat in stats.items():
             fp.write('<li>{1} {0}</li>'.format(*stat))
         fp.write('</ul>')
-        # fp.write('<h2>Code</h2>')
-        # with open(__file__) as gp:
-        #     fp.write('<pre>%s</pre>' % html.escape(gp.read()))
-        fp.write('<p>Generated in %s</p>' % (now-start))
+        fp.write('<h2>Code</h2>')
+        fp.write('<p><a href="https://github.com/dwyer/motocrawl">https://github.com/dwyer/motocrawl</a></p>')
         fp.write('</body></html>')
+
+print('Generated in %s' % (now-start))
